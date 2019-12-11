@@ -173,29 +173,44 @@ let html_escape text =
   text
 
 (* Used to memoize the result of pod2text. *)
-type memo_key = int option * bool * bool * string * string
-                (* width,    trim, discard, name,   longdesc *)
-type memo_value = string list (* list of lines of POD file *)
-
-let pod2text_memo_filename = "generator/.pod2text.data.version.2"
-let pod2text_memo : (memo_key, memo_value) Hashtbl.t =
-  try with_open_in pod2text_memo_filename input_value
-  with  _ -> Hashtbl.create 13
-let pod2text_memo_unsaved_count = ref 0
-let pod2text_memo_atexit = ref false
-let pod2text_memo_save () =
-  with_open_out pod2text_memo_filename
-                (fun chan -> output_value chan pod2text_memo)
-let pod2text_memo_updated () =
-  if not (!pod2text_memo_atexit) then (
-    at_exit pod2text_memo_save;
-    pod2text_memo_atexit := true;
+type pod2text_memo_key = int option * bool * bool * string * string
+                         (* width,    trim, discard, name,   longdesc *)
+type pod2text_memo_value = string list (* list of lines of POD file *)
+let run_pod2text (width, trim, discard, name, longdesc) =
+  let cmd =
+    match width with
+    | Some width ->
+        sprintf "pod2text -w %d" width
+    | None ->
+        "pod2text" in
+  let chan_out, chan_in = open_process cmd in
+  output_string chan_in "=encoding utf8\n\n";
+  output_string chan_in (sprintf "=head1 %s\n\n%s\n" name longdesc);
+  close_out chan_in;
+  let lines = ref [] in
+  (try while true do lines := input_line chan_out :: !lines done
+   with End_of_file -> ());
+  let lines = List.rev !lines in
+  (match close_process (chan_out, chan_in) with
+   | WEXITED 0 -> ()
+   | WEXITED i ->
+       failwithf "pod2text: process exited with non-zero status (%d)" i
+   | WSIGNALED i | WSTOPPED i ->
+       failwithf "pod2text: process signalled or stopped by signal %d" i
   );
-  pod2text_memo_unsaved_count := !pod2text_memo_unsaved_count + 1;
-  if !pod2text_memo_unsaved_count >= 100 then (
-    pod2text_memo_save ();
-    pod2text_memo_unsaved_count := 0;
-  )
+  let lines =
+    if discard then (* discard the first line of output *) List.tl lines
+    else lines in
+  let lines =
+    if trim then List.map String.triml lines
+    else lines in
+  lines
+let pod2text_memo : (pod2text_memo_key, pod2text_memo_value) Memoized_cache.t =
+  Memoized_cache.create ~version:2 "pod2text" run_pod2text
+
+let memos_atexit = ref false
+let memos_save () =
+  Memoized_cache.save pod2text_memo
 
 (* Useful if you need the longdesc POD text as plain text.  Returns a
  * list of lines.
@@ -204,42 +219,12 @@ let pod2text_memo_updated () =
  * we memoize the results.
  *)
 let pod2text ?width ?(trim = true) ?(discard = true) name longdesc =
-  let key : memo_key = width, trim, discard, name, longdesc in
-  try Hashtbl.find pod2text_memo key
-  with Not_found ->
-    let filename, chan = Filename.open_temp_file "gen" ".tmp" in
-    fprintf chan "=encoding utf8\n\n";
-    fprintf chan "=head1 %s\n\n%s\n" name longdesc;
-    close_out chan;
-    let cmd =
-      match width with
-      | Some width ->
-          sprintf "pod2text -w %d %s" width (Filename.quote filename)
-      | None ->
-          sprintf "pod2text %s" (Filename.quote filename) in
-    let chan = open_process_in cmd in
-    let lines = ref [] in
-    let rec loop i =
-      let line = input_line chan in
-      if i = 1 && discard then  (* discard the first line of output *)
-        loop (i+1)
-      else (
-        let line = if trim then String.triml line else line in
-        lines := line :: !lines;
-        loop (i+1)
-      ) in
-    let lines : memo_value = try loop 1 with End_of_file -> List.rev !lines in
-    unlink filename;
-    (match close_process_in chan with
-     | WEXITED 0 -> ()
-     | WEXITED i ->
-         failwithf "pod2text: process exited with non-zero status (%d)" i
-     | WSIGNALED i | WSTOPPED i ->
-         failwithf "pod2text: process signalled or stopped by signal %d" i
-    );
-    Hashtbl.add pod2text_memo key lines;
-    pod2text_memo_updated ();
-    lines
+  let key : pod2text_memo_key = width, trim, discard, name, longdesc in
+  if not (!memos_atexit) then (
+    at_exit memos_save;
+    memos_atexit := true;
+  );
+  Memoized_cache.find pod2text_memo key
 
 (* Compare two actions (for sorting). *)
 let action_compare { name = n1 } { name = n2 } = compare n1 n2

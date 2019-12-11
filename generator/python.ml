@@ -44,6 +44,13 @@ let rec generate_python_actions_h () =
 #include \"guestfs.h\"
 #include \"guestfs-utils.h\"
 
+#define PY_SSIZE_T_CLEAN 1
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored \"-Wcast-align\"
+#include <Python.h>
+#pragma GCC diagnostic pop
+
 #if PY_VERSION_HEX < 0x02050000
 typedef int Py_ssize_t;
 #define PY_SSIZE_T_MAX INT_MAX
@@ -134,12 +141,6 @@ and generate_python_structs () =
   generate_header CStyle LGPLv2plus;
 
   pr "\
-/* This has to be included first, else definitions conflict with
- * glibc header files.  Python is broken.
- */
-#define PY_SSIZE_T_CLEAN 1
-#include <Python.h>
-
 #include <config.h>
 
 #include <stdio.h>
@@ -272,13 +273,11 @@ and generate_python_actions actions () =
   generate_header CStyle LGPLv2plus;
 
   pr "\
-/* This has to be included first, else definitions conflict with
- * glibc header files.  Python is broken.
- */
-#define PY_SSIZE_T_CLEAN 1
-#include <Python.h>
-
 #include <config.h>
+
+/* It is safe to call deprecated functions from this file. */
+#define GUESTFS_NO_WARN_DEPRECATED
+#undef GUESTFS_NO_DEPRECATED
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -565,12 +564,6 @@ and generate_python_module () =
   generate_header CStyle LGPLv2plus;
 
   pr "\
-/* This has to be included first, else definitions conflict with
- * glibc header files.  Python is broken.
- */
-#define PY_SSIZE_T_CLEAN 1
-#include <Python.h>
-
 #include <config.h>
 
 #include <stdio.h>
@@ -906,6 +899,18 @@ class GuestFS(object):
           pr "        %s = %s.c_pointer()\n" n n
       ) args;
       pr "        self._check_not_closed()\n";
+      (match f.deprecated_by with
+      | Not_deprecated -> ()
+      | Replaced_by alt ->
+        pr "        import warnings\n";
+        pr "        warnings.warn(\"use GuestFS.%s() \"\n" alt;
+        pr "                      \"instead of GuestFS.%s()\",\n" f.name;
+        pr "                      DeprecationWarning, stacklevel=2)\n";
+      | Deprecated_no_replacement ->
+        pr "        import warnings\n";
+        pr "        warnings.warn(\"do not use GuestFS.%s()\",\n" f.name;
+        pr "                      DeprecationWarning, stacklevel=2)\n";
+      );
       let function_string =
         "self._o" ^
         map_join (fun arg -> sprintf ", %s" (name_of_argt arg))

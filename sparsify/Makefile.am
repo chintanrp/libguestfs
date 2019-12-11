@@ -52,8 +52,7 @@ virt_sparsify_CPPFLAGS = \
 	-I$(top_builddir) \
 	-I$(shell $(OCAMLC) -where) \
 	-I$(top_srcdir)/common/utils \
-	-I$(top_srcdir)/lib \
-	-I$(top_srcdir)/fish
+	-I$(top_srcdir)/lib
 virt_sparsify_CFLAGS = \
 	$(WARN_CFLAGS) $(WERROR_CFLAGS)
 
@@ -131,6 +130,7 @@ stamp-virt-sparsify.pod: virt-sparsify.pod
 	$(PODWRAPPER) \
 	  --man virt-sparsify.1 \
 	  --html $(top_builddir)/website/virt-sparsify.1.html \
+	  --path $(top_srcdir)/common/options \
 	  --license GPLv2+ \
 	  --warning general \
 	  $<

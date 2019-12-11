@@ -98,14 +98,12 @@ prepend PATH "$b/fuse"
 prepend PATH "$b/get-kernel"
 prepend PATH "$b/inspector"
 prepend PATH "$b/make-fs"
-prepend PATH "$b/p2v"
 prepend PATH "$b/rescue"
 prepend PATH "$b/resize"
 prepend PATH "$b/sparsify"
 prepend PATH "$b/sysprep"
 prepend PATH "$b/test-tool"
 prepend PATH "$b/tools"
-prepend PATH "$b/v2v"
 export PATH
 
 # Set LD_LIBRARY_PATH and DYLD_LIBRARY_PATH to contain library.
@@ -123,12 +121,6 @@ export DYLD_LIBRARY_PATH
 if [ -z "$XDG_CONFIG_DIRS" ]; then
     prepend XDG_CONFIG_DIRS "$b/builder/test-website"
     export XDG_CONFIG_DIRS
-fi
-
-# virt-p2v-make-* data directory.
-if [ -z "$VIRT_P2V_DATA_DIR" ]; then
-    VIRT_P2V_DATA_DIR="$b/p2v"
-    export VIRT_P2V_DATA_DIR
 fi
 
 # For Perl.
@@ -194,12 +186,29 @@ else
     CGO_CFLAGS="$CGO_CFLAGS -I$s/lib"
 fi
 export CGO_CFLAGS
+if [ -z "$CGO_CFLAGS_ALLOW" ]; then
+    CGO_CFLAGS_ALLOW='-UGUESTFS_NO_DEPRECATED'
+    export CGO_CFLAGS_ALLOW
+else
+    echo "Warning: CGO_CFLAGS_ALLOW already defined! Be sure to include"
+    echo "the -U option."
+fi
 if [ -z "$CGO_LDFLAGS" ]; then
     CGO_LDFLAGS="-L$b/lib/.libs"
 else
     CGO_LDFLAGS="$CGO_LDFLAGS -L$b/lib/.libs"
 fi
 export CGO_LDFLAGS
+
+# For rust
+export RUST="@RUST@"
+export CARGO="@CARGO@"
+if [ -z "$RUSTFLAGS" ]; then
+    RUSTFLAGS="-C link-args=-L$b/lib/.libs"
+else
+    RUSTFLAGS="$RUSTFLAGS -C link-args=-L$b/lib/.libs"
+fi
+export RUSTFLAGS
 
 # For GObject, Javascript and friends.
 export GJS="@GJS@"

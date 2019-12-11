@@ -28,3 +28,4 @@ val generate_perl_bindtests : unit -> unit
 val generate_php_bindtests : unit -> unit
 val generate_python_bindtests : unit -> unit
 val generate_ruby_bindtests : unit -> unit
+val generate_rust_bindtests : unit -> unit

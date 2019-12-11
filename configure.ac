@@ -19,8 +19,8 @@
 # add extra information using --with-extra="..." which may be any
 # freeform string.
 m4_define([libguestfs_major],   [1])
-m4_define([libguestfs_minor],   [40])
-m4_define([libguestfs_release], [0])
+m4_define([libguestfs_minor],   [41])
+m4_define([libguestfs_release], [8])
 
 AC_INIT([libguestfs],libguestfs_major.libguestfs_minor.libguestfs_release)
 
@@ -161,12 +161,10 @@ HEADING([Checking for Go])
 m4_include([m4/guestfs-golang.m4])
 HEADING([Checking for GObject Introspection])
 m4_include([m4/guestfs-gobject.m4])
+HEADING([Checking for Rust])
+m4_include([m4/guestfs-rust.m4])
 HEADING([Checking for Vala])
 VAPIGEN_CHECK
-
-dnl virt-v2v, virt-p2v.
-HEADING([Checking the virt-v2v and virt-p2v dependencies])
-m4_include([m4/guestfs-v2v.m4])
 
 dnl Bash completion.
 HEADING([Checking for bash completion])
@@ -211,12 +209,6 @@ AC_CONFIG_FILES([ocaml-dep.sh],
                 [chmod +x,-w ocaml-dep.sh])
 AC_CONFIG_FILES([ocaml-link.sh],
                 [chmod +x,-w ocaml-link.sh])
-AC_CONFIG_FILES([p2v/virt-p2v-make-disk],
-                [chmod +x,-w p2v/virt-p2v-make-disk])
-AC_CONFIG_FILES([p2v/virt-p2v-make-kickstart],
-                [chmod +x,-w p2v/virt-p2v-make-kickstart])
-AC_CONFIG_FILES([p2v/virt-p2v-make-kiwi],
-                [chmod +x,-w p2v/virt-p2v-make-kiwi])
 AC_CONFIG_FILES([php/extension/php-for-tests.sh],
                 [chmod +x,-w php/extension/php-for-tests.sh])
 AC_CONFIG_FILES([pick-guests.pl],
@@ -240,8 +232,8 @@ AC_CONFIG_FILES([Makefile
                  cat/Makefile
                  common/errnostring/Makefile
                  common/edit/Makefile
-                 common/miniexpect/Makefile
                  common/mlaugeas/Makefile
+                 common/mlcustomize/Makefile
                  common/mlgettext/Makefile
                  common/mlpcre/Makefile
                  common/mlprogress/Makefile
@@ -295,7 +287,6 @@ AC_CONFIG_FILES([Makefile
                  ocaml/META
                  ocaml/Makefile
                  ocaml/examples/Makefile
-                 p2v/Makefile
                  perl/Build.PL
                  perl/Makefile
                  perl/examples/Makefile
@@ -314,13 +305,13 @@ AC_CONFIG_FILES([Makefile
                  ruby/Rakefile
                  ruby/examples/Makefile
                  ruby/ext/guestfs/extconf.rb
+                 rust/Makefile
+                 rust/Cargo.toml
                  sparsify/Makefile
                  sysprep/Makefile
                  test-data/Makefile
                  test-data/binaries/Makefile
                  test-data/blank-disks/Makefile
-                 test-data/fake-virtio-win/Makefile
-                 test-data/fake-virt-tools/Makefile
                  test-data/files/Makefile
                  test-data/phony-guests/Makefile
                  test-data/phony-guests/guests.xml
@@ -365,16 +356,8 @@ AC_CONFIG_FILES([Makefile
                  tests/xml/Makefile
                  tests/yara/Makefile
                  tools/Makefile
-                 utils/boot-analysis/Makefile
-                 utils/boot-benchmark/Makefile
-                 utils/max-disks/Makefile
-                 utils/qemu-boot/Makefile
-                 utils/qemu-speed-test/Makefile
-                 v2v/Makefile
-                 v2v/config.ml
-                 v2v/test-harness/Makefile
-                 v2v/test-harness/META
                  website/index.html])
+
 AC_OUTPUT
 
 dnl Produce summary.
@@ -393,8 +376,6 @@ echo       "FUSE filesystem ..................... $enable_fuse"
 echo       "Default backend ..................... $DEFAULT_BACKEND"
 AS_ECHO_N(["GNU gettext for i18n ................ "])
 if test "x$HAVE_GNU_GETTEXT_TRUE" = "x"; then echo "yes"; else echo "no"; fi
-AS_ECHO_N(["virt-p2v ............................ "])
-if test "x$HAVE_P2V_TRUE" = "x"; then echo "yes"; else echo "no"; fi
 AS_ECHO_N(["OCaml bindings ...................... "])
 if test "x$HAVE_OCAML_TRUE" = "x"; then echo "yes"; else echo "no"; fi
 AS_ECHO_N(["OCaml-based virt tools .............. "])
@@ -427,6 +408,8 @@ AS_ECHO_N(["Vala bindings ....................... "])
 if test "x$ENABLE_VAPIGEN_TRUE" = "x"; then echo "yes"; else echo "no"; fi
 AS_ECHO_N(["bash completion ..................... "])
 if test "x$HAVE_BASH_COMPLETION_TRUE" = "x"; then echo "yes"; else echo "no"; fi
+AS_ECHO_N(["Rust bindings ....................... "])
+if test "x$HAVE_RUST_TRUE" = "x"; then echo "yes"; else echo "no"; fi
 echo
 echo "If any optional component is configured 'no' when you expected 'yes'"
 echo "then you should check the preceding messages."

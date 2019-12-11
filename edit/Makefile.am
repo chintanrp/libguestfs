@@ -28,7 +28,7 @@ virt_edit_SOURCES = \
 	edit.c
 
 virt_edit_CPPFLAGS = \
-	-DGUESTFS_WARN_DEPRECATED=1 \
+	-DGUESTFS_NO_DEPRECATED=1 \
 	-DLOCALEBASEDIR=\""$(datadir)/locale"\" \
 	-I$(top_srcdir)/common/utils -I$(top_builddir)/common/utils \
 	-I$(top_srcdir)/lib -I$(top_builddir)/lib \
@@ -62,6 +62,7 @@ stamp-virt-edit.pod: virt-edit.pod
 	$(PODWRAPPER) \
 	  --man virt-edit.1 \
 	  --html $(top_builddir)/website/virt-edit.1.html \
+	  --path $(top_srcdir)/common/options \
 	  --license GPLv2+ \
 	  --warning general \
 	  $<

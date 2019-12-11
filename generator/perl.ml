@@ -40,6 +40,10 @@ let rec generate_perl_xs () =
   pr "\
 #include <config.h>
 
+/* It is safe to call deprecated functions from this file. */
+#define GUESTFS_NO_WARN_DEPRECATED
+#undef GUESTFS_NO_DEPRECATED
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -331,7 +335,7 @@ PREINIT:
 
   List.iter (
     fun { name; style = (ret, args, optargs as style);
-          c_function; c_optarg_prefix } ->
+          c_function; c_optarg_prefix; deprecated_by } ->
       (match ret with
        | RErr -> pr "void\n"
        | RInt _ -> pr "SV *\n"
@@ -438,6 +442,16 @@ PREINIT:
        | RStruct _
        | RStructList _ ->
            pr " PPCODE:\n";
+      );
+
+      (match deprecated_by with
+      | Not_deprecated -> ()
+      | Replaced_by alt ->
+        pr "      Perl_ck_warner (aTHX_ packWARN(WARN_DEPRECATED),\n";
+        pr "        \"Sys::Guestfs::%s is deprecated; use Sys::Guestfs::%s instead\");\n" name alt;
+      | Deprecated_no_replacement ->
+        pr "      Perl_ck_warner (aTHX_ packWARN(WARN_DEPRECATED),\n";
+        pr "        \"Sys::Guestfs::%s is deprecated\");\n" name;
       );
 
       (* For optional arguments, convert these from the XSUB "items"

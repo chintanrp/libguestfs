@@ -41,7 +41,27 @@ MANPAGES = \
 	guestfs-perl.3 \
 	guestfs-python.3 \
 	guestfs-recipes.1 \
-	guestfs-release-notes.1 \
+	guestfs-release-notes-1.42.1 \
+	guestfs-release-notes-1.40.1 \
+	guestfs-release-notes-1.38.1 \
+	guestfs-release-notes-1.36.1 \
+	guestfs-release-notes-1.34.1 \
+	guestfs-release-notes-1.32.1 \
+	guestfs-release-notes-1.30.1 \
+	guestfs-release-notes-1.28.1 \
+	guestfs-release-notes-1.26.1 \
+	guestfs-release-notes-1.24.1 \
+	guestfs-release-notes-1.22.1 \
+	guestfs-release-notes-1.20.1 \
+	guestfs-release-notes-1.18.1 \
+	guestfs-release-notes-1.16.1 \
+	guestfs-release-notes-1.14.1 \
+	guestfs-release-notes-1.12.1 \
+	guestfs-release-notes-1.10.1 \
+	guestfs-release-notes-1.8.1 \
+	guestfs-release-notes-1.6.1 \
+	guestfs-release-notes-1.4.1 \
+	guestfs-release-notes-historical.1 \
 	guestfs-ruby.3 \
 	guestfs-security.1 \
 	guestfs-testing.1 \
@@ -71,9 +91,6 @@ MANPAGES = \
 	virt-log.1 \
 	virt-ls.1 \
 	virt-make-fs.1 \
-	virt-p2v.1 \
-	virt-p2v-make-disk.1 \
-	virt-p2v-make-kickstart.1 \
 	virt-rescue.1 \
 	virt-resize.1 \
 	virt-sparsify.1 \
@@ -81,15 +98,6 @@ MANPAGES = \
 	virt-tar.1 \
 	virt-tar-in.1 \
 	virt-tar-out.1 \
-	virt-v2v.1 \
-	virt-v2v-copy-to-local.1 \
-	virt-v2v-input-vmware.1 \
-	virt-v2v-input-xen.1 \
-	virt-v2v-output-local.1 \
-	virt-v2v-output-openstack.1 \
-	virt-v2v-output-rhv.1 \
-	virt-v2v-support.1 \
-	virt-v2v-test-harness.1 \
 	virt-win-reg.1
 
 podfiles := $(shell for f in `cat $(top_srcdir)/po-docs/podfiles`; do echo `basename $$f .pod`.pod; done)
@@ -123,9 +131,6 @@ guestfish.1: guestfish.pod guestfish-actions.pod guestfish-commands.pod guestfis
 	  --no-strict-checks \
 	  --man $@ \
 	  --license GPLv2+ \
-	  --insert $(srcdir)/guestfish-actions.pod:__ACTIONS__ \
-	  --insert $(srcdir)/guestfish-commands.pod:__FISH_COMMANDS__ \
-	  --insert $(srcdir)/guestfish-prepopts.pod:__PREPOPTS__ \
 	  $<
 
 virt-builder.1: virt-builder.pod customize-synopsis.pod customize-options.pod

@@ -45,8 +45,6 @@ EXTRA_DIST = \
 	rhbz1091803.sh \
 	rhbz1174551.sh \
 	rhbz1175196.sh \
-	rhbz1232192.sh \
-	rhbz1232192.xml \
 	rhbz1285847.sh \
 	rhbz1370424.sh \
 	rhbz1370424.xml \
@@ -78,7 +76,6 @@ TESTS = \
 	rhbz1011907-1165785.sh \
 	rhbz1174551.sh \
 	rhbz1175196.sh \
-	rhbz1232192.sh \
 	rhbz1285847.sh \
 	rhbz1370424.sh \
 	rhbz1477623.sh \
@@ -106,6 +103,7 @@ check_PROGRAMS = \
 
 rhbz501893_SOURCES = rhbz501893.c
 rhbz501893_CPPFLAGS = \
+	-DGUESTFS_NO_WARN_DEPRECATED=1 \
 	-I$(top_srcdir)/common/utils -I$(top_builddir)/common/utils \
 	-I$(top_srcdir)/lib -I$(top_builddir)/lib
 rhbz501893_CFLAGS = \
@@ -144,6 +142,7 @@ rhbz914931_LDADD = \
 
 rhbz1055452_SOURCES = rhbz1055452.c
 rhbz1055452_CPPFLAGS = \
+	-DGUESTFS_NO_WARN_DEPRECATED=1 \
 	-I$(top_srcdir)/common/utils -I$(top_builddir)/common/utils \
 	-I$(top_srcdir)/lib -I$(top_builddir)/lib
 rhbz1055452_CFLAGS = \

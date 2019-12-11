@@ -135,6 +135,7 @@ bin_PROGRAMS += virt-builder virt-builder-repository
 
 virt_builder_SOURCES = $(SOURCES_C)
 virt_builder_CPPFLAGS = \
+	-DCAML_NAME_SPACE \
 	-I$(builddir) -I$(srcdir) \
 	-I$(top_builddir) \
 	-I$(top_srcdir)/gnulib/lib -I$(top_builddir)/gnulib/lib \
@@ -156,6 +157,7 @@ XOBJECTS = $(BOBJECTS:.cmo=.cmx)
 
 virt_builder_repository_SOURCES = $(REPOSITORY_SOURCES_C)
 virt_builder_repository_CPPFLAGS = \
+	-DCAML_NAME_SPACE \
 	-I$(builddir) -I$(srcdir) \
 	-I$(top_builddir) \
 	-I$(top_srcdir)/gnulib/lib -I$(top_builddir)/gnulib/lib \
@@ -186,6 +188,7 @@ OCAMLPACKAGES = \
 	-I $(top_builddir)/common/mlgettext \
 	-I $(top_builddir)/common/mlpcre \
 	-I $(top_builddir)/common/mltools \
+	-I $(top_builddir)/common/mlcustomize \
 	-I $(top_builddir)/customize
 OCAMLPACKAGES_TESTS =
 if HAVE_OCAML_PKG_GETTEXT
@@ -224,6 +227,7 @@ OCAMLLINKFLAGS = \
 	mlguestfs.$(MLARCHIVE) \
 	mlcutils.$(MLARCHIVE) \
 	mltools.$(MLARCHIVE) \
+	mlcustomize.$(MLARCHIVE) \
 	customize.$(MLARCHIVE) \
 	$(LINK_CUSTOM_OCAMLC_ONLY)
 
@@ -234,6 +238,7 @@ virt_builder_DEPENDENCIES = \
 	../common/mlstdutils/mlstdutils.$(MLARCHIVE) \
 	../common/mlutils/mlcutils.$(MLARCHIVE) \
 	../common/mltools/mltools.$(MLARCHIVE) \
+	../common/mlcustomize/mlcustomize.$(MLARCHIVE) \
 	../customize/customize.$(MLARCHIVE) \
 	$(top_srcdir)/ocaml-link.sh
 virt_builder_LINK = \
@@ -258,12 +263,12 @@ noinst_DATA += $(top_builddir)/website/virt-builder.1.html
 
 virt-builder.1 $(top_builddir)/website/virt-builder.1.html: stamp-virt-builder.pod
 
-stamp-virt-builder.pod: virt-builder.pod $(top_srcdir)/customize/customize-synopsis.pod $(top_srcdir)/customize/customize-options.pod
+stamp-virt-builder.pod: virt-builder.pod $(top_srcdir)/common/mlcustomize/customize-synopsis.pod $(top_srcdir)/common/mlcustomize/customize-options.pod
 	$(PODWRAPPER) \
 	  --man virt-builder.1 \
 	  --html $(top_builddir)/website/virt-builder.1.html \
-	  --insert $(top_srcdir)/customize/customize-synopsis.pod:__CUSTOMIZE_SYNOPSIS__ \
-	  --insert $(top_srcdir)/customize/customize-options.pod:__CUSTOMIZE_OPTIONS__ \
+	  --insert $(top_srcdir)/common/mlcustomize/customize-synopsis.pod:__CUSTOMIZE_SYNOPSIS__ \
+	  --insert $(top_srcdir)/common/mlcustomize/customize-options.pod:__CUSTOMIZE_OPTIONS__ \
 	  --license GPLv2+ \
 	  --warning safe \
 	  $<

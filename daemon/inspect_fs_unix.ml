@@ -54,9 +54,17 @@ let re_openbsd = PCRE.compile "^OpenBSD (\\d+|\\?)\\.(\\d+|\\?)"
 let re_frugalware = PCRE.compile "Frugalware (\\d+)\\.(\\d+)"
 let re_pldlinux = PCRE.compile "(\\d+)\\.(\\d+) PLD Linux"
 let re_neokylin_version = PCRE.compile "^V(\\d+)Update(\\d+)$"
+let re_openmandriva =
+  PCRE.compile "OpenMandriva.*release (\\d+)\\.(\\d+)\\.?(\\d+)? .*"
 
 let arch_binaries =
   [ "/bin/bash"; "/bin/ls"; "/bin/echo"; "/bin/rm"; "/bin/sh" ]
+
+(* List of typical rolling distros, to ease handling them for common
+ * features.
+ *)
+let rolling_distros =
+  [ DISTRO_ARCHLINUX; DISTRO_GENTOO; DISTRO_VOID_LINUX ]
 
 (* Parse a os-release file.
  *
@@ -102,12 +110,8 @@ let rec parse_os_release release_file data =
            version = Some (_, 0) } ->
           false
 
-       (* Rolling releases:
-        * Void Linux has no VERSION_ID and no other version/release-
-        * like file.
-        *)
-       | { distro = Some DISTRO_VOID_LINUX;
-           version = None } ->
+       (* Rolling distros: no VERSION_ID available. *)
+       | { distro = Some d; version = None } when List.mem d rolling_distros ->
           data.version <- Some (0, 0);
           true
 
@@ -140,9 +144,11 @@ and distro_of_os_release_id = function
   | "debian" -> Some DISTRO_DEBIAN
   | "fedora" -> Some DISTRO_FEDORA
   | "frugalware" -> Some DISTRO_FRUGALWARE
+  | "gentoo" -> Some DISTRO_GENTOO
   | "kali" -> Some DISTRO_KALI_LINUX
   | "mageia" -> Some DISTRO_MAGEIA
   | "neokylin" -> Some DISTRO_NEOKYLIN
+  | "openmandriva" -> Some DISTRO_OPENMANDRIVA
   | "opensuse" -> Some DISTRO_OPENSUSE
   | s when String.is_prefix s "opensuse-" -> Some DISTRO_OPENSUSE
   | "pld" -> Some DISTRO_PLD_LINUX
@@ -375,6 +381,12 @@ let linux_root_tests : tests = [
   "/etc/lsb-release",    parse_lsb_release;
 
   (* Now we enter the Wild West ... *)
+
+  (* OpenMandriva includes a [/etc/redhat-release] symlink, hence their
+   * checks need to be performed before the Red-Hat one.
+   *)
+  "/etc/openmandriva-release", parse_generic ~rex:re_openmandriva
+                                             DISTRO_OPENMANDRIVA;
 
   (* RHEL-based distros include a [/etc/redhat-release] file, hence their
    * checks need to be performed before the Red-Hat one.

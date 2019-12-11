@@ -693,6 +693,10 @@ let generate_gobject_session_source () =
   source_start ~shortdesc filename;
 
   pr "
+/* It is safe to call deprecated functions from this file. */
+#define GUESTFS_NO_WARN_DEPRECATED
+#undef GUESTFS_NO_DEPRECATED
+
   #include <glib.h>
   #include <glib-object.h>
   #include <guestfs.h>

@@ -134,6 +134,7 @@ struct backend_libvirt_data {
   size_t nr_secrets;
   char *uefi_code;		/* UEFI (firmware) code and variables. */
   char *uefi_vars;
+  char *default_qemu;           /* default qemu (from domcapabilities) */
   char guestfsd_path[UNIX_PATH_MAX]; /* paths to sockets */
   char console_path[UNIX_PATH_MAX];
 };
@@ -153,6 +154,7 @@ struct libvirt_xml_params {
 };
 
 static int parse_capabilities (guestfs_h *g, const char *capabilities_xml, struct backend_libvirt_data *data);
+static int parse_domcapabilities (guestfs_h *g, const char *domcapabilities_xml, struct backend_libvirt_data *data);
 static int add_secret (guestfs_h *g, virConnectPtr conn, struct backend_libvirt_data *data, const struct drive *drv);
 static int find_secret (guestfs_h *g, const struct backend_libvirt_data *data, const struct drive *drv, const char **type, const char **uuid);
 static int have_secret (guestfs_h *g, const struct backend_libvirt_data *data, const struct drive *drv);
@@ -161,7 +163,7 @@ static void debug_appliance_permissions (guestfs_h *g);
 static void debug_socket_permissions (guestfs_h *g);
 static void libvirt_error (guestfs_h *g, const char *fs, ...) __attribute__((format (printf,2,3)));
 static void libvirt_debug (guestfs_h *g, const char *fs, ...) __attribute__((format (printf,2,3)));
-static int is_custom_hv (guestfs_h *g);
+static int is_custom_hv (guestfs_h *g, struct backend_libvirt_data *data);
 static int is_blk (const char *path);
 static void ignore_errors (void *ignore, virErrorPtr ignore2);
 static void set_socket_create_context (guestfs_h *g);
@@ -324,6 +326,7 @@ launch_libvirt (guestfs_h *g, void *datav, const char *libvirt_uri)
   CLEANUP_FREE void *buf = NULL;
   unsigned long version_number;
   int uefi_flags;
+  CLEANUP_FREE char *domcapabilities_xml = NULL;
 
   params.current_proc_is_root = geteuid () == 0;
 
@@ -417,6 +420,20 @@ launch_libvirt (guestfs_h *g, void *datav, const char *libvirt_uri)
   debug (g, "parsing capabilities XML");
 
   if (parse_capabilities (g, capabilities_xml, data) == -1)
+    goto cleanup;
+
+  domcapabilities_xml = virConnectGetDomainCapabilities (conn, NULL, NULL, NULL,
+                                                         NULL, 0);
+  if (!domcapabilities_xml) {
+    libvirt_error (g, _("could not get libvirt domain capabilities"));
+    goto cleanup;
+  }
+
+  /* Parse domcapabilities XML.
+   */
+  debug (g, "parsing domcapabilities XML");
+
+  if (parse_domcapabilities (g, domcapabilities_xml, data) == -1)
     goto cleanup;
 
   /* UEFI code and variables, on architectures where that is required. */
@@ -589,7 +606,7 @@ launch_libvirt (guestfs_h *g, void *datav, const char *libvirt_uri)
   params.appliance_index = g->nr_drives;
   strcpy (params.appliance_dev, "/dev/sd");
   guestfs_int_drive_name (params.appliance_index, &params.appliance_dev[7]);
-  params.enable_svirt = ! is_custom_hv (g);
+  params.enable_svirt = ! is_custom_hv (g, data);
 
   xml = construct_libvirt_xml (g, &params);
   if (!xml)
@@ -820,13 +837,51 @@ parse_capabilities (guestfs_h *g, const char *capabilities_xml,
 }
 
 static int
-is_custom_hv (guestfs_h *g)
+parse_domcapabilities (guestfs_h *g, const char *domcapabilities_xml,
+                       struct backend_libvirt_data *data)
 {
+  CLEANUP_XMLFREEDOC xmlDocPtr doc = NULL;
+  CLEANUP_XMLXPATHFREECONTEXT xmlXPathContextPtr xpathCtx = NULL;
+  CLEANUP_XMLXPATHFREEOBJECT xmlXPathObjectPtr xpathObj = NULL;
+
+  doc = xmlReadMemory (domcapabilities_xml, strlen (domcapabilities_xml),
+                       NULL, NULL, XML_PARSE_NONET);
+  if (doc == NULL) {
+    error (g, _("unable to parse domain capabilities XML returned by libvirt"));
+    return -1;
+  }
+
+  xpathCtx = xmlXPathNewContext (doc);
+  if (xpathCtx == NULL) {
+    error (g, _("unable to create new XPath context"));
+    return -1;
+  }
+
+  /* This gives us the default QEMU. */
+#define XPATH_EXPR "string(/domainCapabilities/path/text())"
+  xpathObj = xmlXPathEvalExpression (BAD_CAST XPATH_EXPR, xpathCtx);
+  if (xpathObj == NULL) {
+    error (g, _("unable to evaluate XPath expression: %s"), XPATH_EXPR);
+    return -1;
+  }
+#undef XPATH_EXPR
+
+  assert (xpathObj->type == XPATH_STRING);
+  data->default_qemu = safe_strdup (g, (char *) xpathObj->stringval);
+
+  return 0;
+}
+
+static int
+is_custom_hv (guestfs_h *g, struct backend_libvirt_data *data)
+{
+  if (g->hv && STRNEQ (g->hv, data->default_qemu))
+    return 1;
 #ifdef QEMU
-  return g->hv && STRNEQ (g->hv, QEMU);
-#else
-  return 1;
+  if (STRNEQ (data->default_qemu, QEMU))
+    return 1;
 #endif
+  return 0;
 }
 
 #if HAVE_LIBSELINUX
@@ -1212,7 +1267,7 @@ construct_libvirt_xml_devices (guestfs_h *g,
     /* Path to hypervisor.  Only write this if the user has changed the
      * default, otherwise allow libvirt to choose the best one.
      */
-    if (is_custom_hv (g))
+    if (is_custom_hv (g, params->data))
       single_element ("emulator", g->hv);
 #if defined(__arm__)
     /* Hopefully temporary hack to make ARM work (otherwise libvirt
@@ -2013,6 +2068,9 @@ shutdown_libvirt (guestfs_h *g, void *datav, int check_for_errors)
   data->uefi_code = NULL;
   free (data->uefi_vars);
   data->uefi_vars = NULL;
+
+  free (data->default_qemu);
+  data->default_qemu = NULL;
 
   return ret;
 }

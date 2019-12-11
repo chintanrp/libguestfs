@@ -280,22 +280,7 @@ Using this flag is mostly equivalent to using the C<inspect-os>
 command and then using other commands to mount the filesystems that
 were found.
 
-=item B<--key> SELECTOR
-
-Specify a key for LUKS, to automatically open a LUKS device when using
-the inspection.  C<SELECTOR> can be in one of the following formats:
-
-=over 4
-
-=item B<--key> C<DEVICE>:key:KEY_STRING
-
-Use the specified C<KEY_STRING> as passphrase.
-
-=item B<--key> C<DEVICE>:file:FILENAME
-
-Read the passphrase from F<FILENAME>.
-
-=back
+__INCLUDE:key-option.pod__
 
 =item B<--keys-from-stdin>
 
@@ -1133,7 +1118,7 @@ F<test1.img>):
 
  guestfish -N blankdisk.img=disk:200M
 
-__PREPOPTS__
+__INCLUDE:guestfish-prepopts.pod__
 
 =head1 ADDING REMOTE STORAGE
 
@@ -1403,11 +1388,11 @@ With I<-l> or I<--list>, this list all commands.
 
 This exits guestfish.  You can also use C<^D> key.
 
-__FISH_COMMANDS__
+__INCLUDE:guestfish-commands.pod__
 
 =head1 COMMANDS
 
-__ACTIONS__
+__INCLUDE:guestfish-actions.pod__
 
 =head1 EXIT STATUS
 
