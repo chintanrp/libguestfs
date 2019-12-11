@@ -73,12 +73,11 @@ init (void)
 static void
 raise_pcre_error (const char *msg, int errcode)
 {
-  value *exn = caml_named_value ("PCRE.Error");
   value args[2];
 
   args[0] = caml_copy_string (msg);
   args[1] = Val_int (errcode);
-  caml_raise_with_args (*exn, 2, args);
+  caml_raise_with_args (*caml_named_value ("PCRE.Error"), 2, args);
 }
 
 /* Wrap and unwrap pcre regular expression handles, with a finalizer. */
@@ -119,6 +118,15 @@ is_Some_true (value v)
   return
     v != Val_int (0) /* !None */ &&
     Bool_val (Field (v, 0)) /* Some true */;
+}
+
+static int
+Optint_val (value intv, int defval)
+{
+  if (intv == Val_int (0))      /* None */
+    return defval;
+  else                          /* Some int */
+    return Int_val (Field (intv, 0));
 }
 
 value
@@ -165,9 +173,9 @@ guestfs_int_pcre_compile_byte (value *argv, int argn)
 }
 
 value
-guestfs_int_pcre_matches (value rev, value strv)
+guestfs_int_pcre_matches (value offsetv, value rev, value strv)
 {
-  CAMLparam2 (rev, strv);
+  CAMLparam3 (offsetv, rev, strv);
   pcre *re = Regexp_val (rev);
   struct last_match *m, *oldm;
   size_t len = caml_string_length (strv);
@@ -205,7 +213,8 @@ guestfs_int_pcre_matches (value rev, value strv)
     caml_raise_out_of_memory ();
   }
 
-  m->r = pcre_exec (re, NULL, m->subject, len, 0, 0, m->vec, veclen);
+  m->r = pcre_exec (re, NULL, m->subject, len, Optint_val (offsetv, 0), 0,
+                    m->vec, veclen);
   if (m->r < 0 && m->r != PCRE_ERROR_NOMATCH) {
     int ret = m->r;
     free_last_match (m);

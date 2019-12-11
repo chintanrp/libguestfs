@@ -41,7 +41,7 @@ endif
 SUBDIRS += common/errnostring common/protocol common/qemuopts
 SUBDIRS += common/utils
 SUBDIRS += common/structs
-SUBDIRS += lib docs examples po
+SUBDIRS += lib docs examples
 
 # The daemon and the appliance.
 SUBDIRS += common/mlutils
@@ -110,9 +110,6 @@ SUBDIRS += fish
 
 # virt-tools in C.
 SUBDIRS += align cat diff df edit format inspector make-fs rescue
-if HAVE_P2V
-SUBDIRS += common/miniexpect p2v
-endif
 
 # bash-completion
 SUBDIRS += bash
@@ -151,6 +148,9 @@ endif
 if HAVE_GOLANG
 SUBDIRS += golang golang/examples
 endif
+if HAVE_RUST
+SUBDIRS += rust
+endif
 
 # Unconditional because nothing is built yet.
 SUBDIRS += csharp
@@ -163,16 +163,13 @@ SUBDIRS += common/mlprogress
 SUBDIRS += common/mlvisit
 SUBDIRS += common/mlxml
 SUBDIRS += common/mltools
+SUBDIRS += common/mlcustomize
 SUBDIRS += customize
 SUBDIRS += builder builder/templates
 SUBDIRS += get-kernel
 SUBDIRS += resize
 SUBDIRS += sparsify
 SUBDIRS += sysprep
-SUBDIRS += v2v
-if HAVE_OCAML_PKG_LIBVIRT
-SUBDIRS += v2v/test-harness
-endif
 if HAVE_FUSE
 SUBDIRS += dib
 endif
@@ -188,15 +185,8 @@ if HAVE_FUSE
 SUBDIRS += fuse
 endif
 
-# Miscellaneous utilities.
-if HAVE_BOOT_ANALYSIS
-SUBDIRS += utils/boot-analysis
-endif
-SUBDIRS += \
-	utils/boot-benchmark \
-	utils/max-disks \
-	utils/qemu-boot \
-	utils/qemu-speed-test
+# After all source files were used we can generate the translation strings
+SUBDIRS += po
 
 # po-docs must come after tools, inspector.
 if HAVE_PO4A
@@ -214,6 +204,8 @@ EXTRA_DIST = \
 	bindtests \
 	cfg.mk \
 	check-mli.sh \
+	common/.gitignore \
+	common/README \
 	contrib/autobuild/autobuild.sh \
 	contrib/intro/libguestfs-intro.html \
 	contrib/intro/overview.png \
@@ -226,11 +218,6 @@ EXTRA_DIST = \
 	contrib/intro/vmm-icons-t.png \
 	contrib/intro/vmm-icons.png \
 	contrib/intro/win7.xml \
-	contrib/p2v/aux-scripts/do-build.sh \
-	contrib/p2v/build-p2v-iso.sh \
-	contrib/p2v/patches/0001-RHEL-5-ONLY-DISABLE-AUTOMATIC-REMOTE-PORT-ALLOCATION.patch \
-	contrib/p2v/patches/0002-RHEL-5-ONLY-QEMU-NBD-1.4-HAS-NO-f-OPTION.patch \
-	contrib/p2v/test-p2v-iso.sh \
 	contrib/README \
 	contrib/visualize-alignment/.gitignore \
 	contrib/visualize-alignment/guestfish-add-mount.qtr \
@@ -254,7 +241,6 @@ EXTRA_DIST = \
 	tests/test-functions.sh \
 	tmp/.gitignore \
 	update-bugs.sh \
-	utils/README \
 	valgrind-suppressions \
 	website/bugs.png \
 	website/communicate.png \
@@ -330,7 +316,7 @@ ChangeLog: configure.ac
 docs/C_SOURCE_FILES: configure.ac
 	rm -f $@ $@-t
 	find $(DIST_SUBDIRS) -name '*.[ch]' | \
-	grep -v -E '^(builder/index-parse\.|builder/index-scan\.|examples/|gnulib/|gobject/|java/com_redhat_et_libguestfs|perl/|php/extension/config\.h|ruby/ext/guestfs/extconf\.h|tests/|test-data/)' | \
+	grep -v -E '^(builder/index-parse\.|builder/index-scan\.|common/mllibvirt/libvirt_c\.c|examples/|gnulib/|gobject/|java/com_redhat_et_libguestfs|perl/|php/extension/config\.h|ruby/ext/guestfs/extconf\.h|tests/|test-data/)' | \
 	grep -v -E '/(guestfs|rc)_protocol\.' | \
 	grep -v -E '.*/errnostring\.' | \
 	grep -v -E '.*-gperf\.' | \
@@ -346,15 +332,15 @@ po/POTFILES: configure.ac
 	grep -v -E '/((guestfs|rc)_protocol\.c)$$' | \
 	grep -v -E '^python/utils\.c$$' | \
 	grep -v -E '^perl/lib/Sys/Guestfs\.c$$' | \
+	grep -v -E '^common/mllibvirt/libvirt_c\.c$$' | \
 	LC_ALL=C sort -u > $@-t
 	mv $@-t $@
 
 po/POTFILES-ml: configure.ac
 	rm -f $@ $@-t
 	cd $(srcdir); \
-	find builder common/ml* customize dib get-kernel resize sparsify sysprep v2v -name '*.ml' | \
+	find builder common/ml* customize dib get-kernel resize sparsify sysprep -name '*.ml' | \
 	grep -v '^builder/templates/' | \
-	grep -v '^v2v/config.ml$$' | \
 	LC_ALL=C sort > $@-t
 	mv $@-t $@
 
@@ -592,7 +578,9 @@ maintainer-check-authors:
 maintainer-check-extra-dist:
 	zcat $(PACKAGE_NAME)-$(VERSION).tar.gz | tar tf - | sort | \
 	  sed 's,^$(PACKAGE_NAME)-$(VERSION)/,,' > tmp/tarfiles
-	git ls-files | \
+	( git ls-files ; \
+	  cd common; git ls-files | sed 's,^,common/,' ) | \
+	  grep -v '^common$$' | \
 	  grep -v '^intltool-.*\.in' | \
 	  grep -v '^\.gitmodules' | \
 	  grep -v '^\.gnulib' | \

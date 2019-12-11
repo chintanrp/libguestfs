@@ -61,17 +61,12 @@ cp @bindir@/virt-get-kernel       get-kernel/
 cp @bindir@/virt-inspector        inspector/
 cp @bindir@/virt-ls               cat/
 cp @bindir@/virt-make-fs          make-fs/
-cp @libdir@/virt-p2v/virt-p2v.xz  p2v/
-unxz -fk p2v/virt-p2v.xz
-chmod +x p2v/virt-p2v
 cp @bindir@/virt-rescue           rescue/
 cp @bindir@/virt-resize           resize/
 cp @bindir@/virt-sparsify         sparsify/
 cp @bindir@/virt-sysprep          sysprep/
 cp @bindir@/virt-tar-in           fish/
 cp @bindir@/virt-tar-out          fish/
-cp @bindir@/virt-v2v              v2v/
-cp @bindir@/virt-v2v-copy-to-local v2v/
 cp @bindir@/virt-win-reg          tools/
 
 # virt-list-filesystems, virt-list-partitions and virt-tar are not
@@ -105,7 +100,6 @@ compare @libdir@/libguestfs.so lib/.libs/libguestfs.so
 compare @bindir@/guestfish  fish/guestfish
 compare @bindir@/guestmount fuse/guestmount
 compare @bindir@/virt-df    df/virt-df
-compare @bindir@/virt-v2v   v2v/virt-v2v
 compare @libdir@/guestfs/supermin.d/daemon.tar.gz \
                             appliance/supermin.d/daemon.tar.gz
 

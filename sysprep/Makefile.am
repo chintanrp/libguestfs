@@ -95,8 +95,7 @@ virt_sysprep_CPPFLAGS = \
 	-I$(top_srcdir)/gnulib/lib -I$(top_builddir)/gnulib/lib \
 	-I$(shell $(OCAMLC) -where) \
 	-I$(top_srcdir)/common/utils \
-	-I$(top_srcdir)/lib \
-	-I$(top_srcdir)/fish
+	-I$(top_srcdir)/lib
 virt_sysprep_CFLAGS = \
 	$(WARN_CFLAGS) $(WERROR_CFLAGS) \
 	$(LIBXML2_CFLAGS)
@@ -121,6 +120,7 @@ OCAMLPACKAGES = \
 	-I $(top_builddir)/common/mlpcre \
 	-I $(top_builddir)/common/mlvisit \
 	-I $(top_builddir)/common/mltools \
+	-I $(top_builddir)/common/mlcustomize \
 	-I $(top_builddir)/customize
 if HAVE_OCAML_PKG_GETTEXT
 OCAMLPACKAGES += -package gettext-stub
@@ -152,6 +152,7 @@ OCAMLLINKFLAGS = \
 	mlcutils.$(MLARCHIVE) \
 	mltools.$(MLARCHIVE) \
 	mlvisit.$(MLARCHIVE) \
+	mlcustomize.$(MLARCHIVE) \
 	customize.$(MLARCHIVE) \
 	$(LINK_CUSTOM_OCAMLC_ONLY)
 
@@ -162,6 +163,7 @@ virt_sysprep_DEPENDENCIES = \
 	../common/mlgettext/mlgettext.$(MLARCHIVE) \
 	../common/mlpcre/mlpcre.$(MLARCHIVE) \
 	../common/mltools/mltools.$(MLARCHIVE) \
+	../common/mlcustomize/mlcustomize.$(MLARCHIVE) \
 	../customize/customize.$(MLARCHIVE) \
 	$(top_srcdir)/ocaml-link.sh
 virt_sysprep_LINK = \
@@ -190,6 +192,7 @@ stamp-virt-sysprep.pod: virt-sysprep.pod sysprep-extra-options.pod sysprep-opera
 	  --man virt-sysprep.1 \
           --insert sysprep-extra-options.pod:__EXTRA_OPTIONS__ \
           --insert sysprep-operations.pod:__OPERATIONS__ \
+	  --path $(top_srcdir)/common/options \
 	  --html $(top_builddir)/website/virt-sysprep.1.html \
 	  --license GPLv2+ \
 	  --warning general \

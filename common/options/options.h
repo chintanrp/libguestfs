@@ -105,8 +105,12 @@ struct mp {
 
 /* A key in the key store. */
 struct key_store_key {
-  /* The device this key refers to. */
-  char *device;
+  /* An ID for the device this key refers to.  It can be either the libguestfs
+   * device name, or the UUID.
+   *
+   * There may be multiple matching devices in the list.
+   */
+  char *id;
 
   enum {
     key_string,             /* key specified as string */
@@ -147,7 +151,7 @@ extern void print_inspect_prompt (void);
 
 /* in key.c */
 extern char *read_key (const char *param);
-extern char *get_key (struct key_store *ks, const char *device);
+extern char **get_keys (struct key_store *ks, const char *device, const char *uuid);
 extern struct key_store *key_store_add_from_selector (struct key_store *ks, const char *selector);
 extern struct key_store *key_store_import_key (struct key_store *ks, const struct key_store_key *key);
 extern void free_key_store (struct key_store *ks);

@@ -85,6 +85,8 @@ sources = \
 	lua.mli \
 	main.ml \
 	main.mli \
+	memoized_cache.ml \
+	memoized_cache.mli \
 	OCaml.ml \
 	OCaml.mli \
 	optgroups.ml \
@@ -101,10 +103,10 @@ sources = \
 	proc_nr.mli \
 	python.ml \
 	python.mli \
-	p2v_config.ml \
-	p2v_config.mli \
 	ruby.ml \
 	ruby.mli \
+	rust.ml \
+	rust.mli \
 	structs.ml \
 	structs.mli \
 	tests_c_api.ml \
@@ -121,6 +123,7 @@ sources = \
 # In build dependency order.
 objects = \
 	types.cmo \
+	memoized_cache.cmo \
 	utils.cmo \
 	proc_nr.cmo \
 	actions_augeas.cmo \
@@ -163,11 +166,11 @@ objects = \
 	lua.cmo \
 	GObject.cmo \
 	golang.cmo \
+	rust.cmo \
 	bindtests.cmo \
 	errnostring.cmo \
 	customize.cmo \
 	UEFI.cmo \
-	p2v_config.cmo \
 	main.cmo
 
 EXTRA_DIST = $(sources) files-generated.txt

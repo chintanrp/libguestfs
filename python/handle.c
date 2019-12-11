@@ -22,12 +22,6 @@
  * F<python/actions-*.c>).
  */
 
-/* This has to be included first, else definitions conflict with
- * glibc header files.  Python is broken.
- */
-#define PY_SSIZE_T_CLEAN 1
-#include <Python.h>
-
 #include <config.h>
 
 #include <stdio.h>
@@ -118,13 +112,20 @@ guestfs_int_py_event_callback_wrapper (guestfs_h *g,
                                    const char *buf, size_t buf_len,
                                    const uint64_t *array, size_t array_len)
 {
-  PyGILState_STATE py_save = PyGILState_UNLOCKED;
+  PyGILState_STATE py_save;
   PyObject *py_callback = callback;
   PyObject *py_array;
   PyObject *args;
   PyObject *a;
   size_t i;
   PyObject *py_r;
+  int threads_initialized = PyEval_ThreadsInitialized ();
+
+  if (_Py_IsFinalizing ())
+    return;
+
+  if (threads_initialized)
+    py_save = PyGILState_Ensure ();
 
   py_array = PyList_New (array_len);
   for (i = 0; i < array_len; ++i) {
@@ -138,13 +139,7 @@ guestfs_int_py_event_callback_wrapper (guestfs_h *g,
                         buf, buf_len, py_array);
   Py_INCREF (args);
 
-  if (PyEval_ThreadsInitialized ())
-    py_save = PyGILState_Ensure ();
-
   py_r = PyObject_CallObject (py_callback, args);
-
-  if (PyEval_ThreadsInitialized ())
-    PyGILState_Release (py_save);
 
   Py_DECREF (args);
 
@@ -153,6 +148,9 @@ guestfs_int_py_event_callback_wrapper (guestfs_h *g,
   else
     /* Callback threw an exception: print it. */
     PyErr_PrintEx (0);
+
+  if (threads_initialized)
+    PyGILState_Release (py_save);
 }
 
 PyObject *

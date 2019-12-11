@@ -123,7 +123,7 @@ cmds-gperf.c: cmds-gperf.gperf
 	mv $@-t $@
 
 guestfish_CPPFLAGS = \
-	-DGUESTFS_WARN_DEPRECATED=1 \
+	-DGUESTFS_NO_DEPRECATED=1 \
 	-DLOCALEBASEDIR=\""$(datadir)/locale"\" \
 	-I$(top_srcdir)/common/utils -I$(top_builddir)/common/utils \
 	-I$(top_srcdir)/common/structs -I$(top_builddir)/common/structs \
@@ -201,9 +201,7 @@ stamp-guestfish.pod: guestfish.pod guestfish-actions.pod guestfish-commands.pod 
 	$(PODWRAPPER) \
 	  --man guestfish.1 \
 	  --html $(top_builddir)/website/guestfish.1.html \
-	  --insert $(srcdir)/guestfish-actions.pod:__ACTIONS__ \
-	  --insert $(srcdir)/guestfish-commands.pod:__FISH_COMMANDS__ \
-	  --insert $(srcdir)/guestfish-prepopts.pod:__PREPOPTS__ \
+	  --path $(srcdir) --path $(top_srcdir)/common/options \
 	  --license GPLv2+ \
 	  --warning ro-option \
 	  $<

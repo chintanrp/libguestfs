@@ -111,6 +111,10 @@ and generate_ruby_c actions () =
   pr "\
 #include <config.h>
 
+/* It is safe to call deprecated functions from this file. */
+#define GUESTFS_NO_WARN_DEPRECATED
+#undef GUESTFS_NO_DEPRECATED
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -246,6 +250,16 @@ and generate_ruby_c actions () =
         ) args;
         pr "  volatile VALUE optargsv = argc > %d ? argv[%d] : rb_hash_new ();\n"
           nr_args nr_args;
+        pr "\n"
+      );
+
+      (match f.deprecated_by with
+      | Not_deprecated -> ()
+      | Replaced_by alt ->
+        pr "  rb_warn (\"Guestfs#%s is deprecated; use #%s instead\");\n" f.name alt;
+        pr "\n"
+      | Deprecated_no_replacement ->
+        pr "  rb_warn (\"Guestfs#%s is deprecated\");\n" f.name;
         pr "\n"
       );
 

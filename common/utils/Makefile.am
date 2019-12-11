@@ -20,7 +20,6 @@ include $(top_srcdir)/subdir-rules.mk
 noinst_LTLIBRARIES = libutils.la
 
 libutils_la_SOURCES = \
-	../../lib/guestfs.h \
 	cleanups.c \
 	cleanups.h \
 	gnulib-cleanups.c \
@@ -29,7 +28,7 @@ libutils_la_SOURCES = \
 	libxml2-writer-macros.h \
 	utils.c
 libutils_la_CPPFLAGS = \
-	-DGUESTFS_WARN_DEPRECATED=1 \
+	-DGUESTFS_NO_DEPRECATED=1 \
 	-DGUESTFS_PRIVATE=1 \
 	-I$(top_srcdir)/gnulib/lib -I$(top_builddir)/gnulib/lib \
 	-I$(top_srcdir)/lib -I$(top_builddir)/lib

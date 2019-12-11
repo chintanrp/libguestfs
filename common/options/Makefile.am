@@ -34,7 +34,7 @@ liboptions_la_SOURCES = \
 	uri.h \
 	uri.c
 liboptions_la_CPPFLAGS = \
-	-DGUESTFS_WARN_DEPRECATED=1 \
+	-DGUESTFS_NO_DEPRECATED=1 \
 	-I$(top_srcdir)/common/utils -I$(top_builddir)/common/utils \
 	-I$(top_srcdir)/lib -I$(top_builddir)/lib \
 	-I$(top_srcdir)/gnulib/lib -I$(top_builddir)/gnulib/lib
@@ -44,7 +44,6 @@ liboptions_la_CFLAGS = \
 	$(LIBXML2_CFLAGS)
 liboptions_la_LIBADD = \
 	$(top_builddir)/common/utils/libutils.la \
-	$(top_builddir)/lib/libguestfs.la \
 	$(LIBCONFIG_LIBS) \
 	$(LIBXML2_LIBS) \
 	$(LTLIBINTL)

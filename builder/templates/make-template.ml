@@ -352,6 +352,7 @@ and os_of_string os ver =
   | "debian", "7" -> Debian (7, "wheezy")
   | "debian", "8" -> Debian (8, "jessie")
   | "debian", "9" -> Debian (9, "stretch")
+  | "debian", "10" -> Debian (10, "buster")
   | "ubuntu", "10.04" -> Ubuntu (ver, "lucid")
   | "ubuntu", "12.04" -> Ubuntu (ver, "precise")
   | "ubuntu", "14.04" -> Ubuntu (ver, "trusty")
@@ -423,9 +424,6 @@ and filename_of_os os arch ext =
   | CentOS (major, minor) ->
      if arch = X86_64 then sprintf "centos-%d.%d%s" major minor ext
      else sprintf "centos-%d.%d-%s%s" major minor (string_of_arch arch) ext
-  | RHEL (8, 0) -> (* RHEL 8 Alpha temporarily *)
-     if arch = X86_64 then sprintf "rhel-8.0-alpha%s" ext
-     else sprintf "rhel-8.0-alpha-%s%s" (string_of_arch arch) ext
   | RHEL (major, minor) ->
      if arch = X86_64 then sprintf "rhel-%d.%d%s" major minor ext
      else sprintf "rhel-%d.%d-%s%s" major minor (string_of_arch arch) ext
@@ -453,7 +451,6 @@ and string_of_os os arch = filename_of_os os arch ""
 and string_of_os_noarch = function
   | Fedora ver -> sprintf "fedora-%d" ver
   | CentOS (major, minor) -> sprintf "centos-%d.%d" major minor
-  | RHEL (8, 0) -> sprintf "rhel-8.0-alpha" (* RHEL 8 Alpha temporarily. *)
   | RHEL (major, minor) -> sprintf "rhel-%d.%d" major minor
   | Debian (ver, _) -> sprintf "debian-%d" ver
   | Ubuntu (ver, _) -> sprintf "ubuntu-%s" ver
@@ -548,6 +545,17 @@ mouse generic
 
   bpf "bootloader --location=mbr --append=\"%s\"\n"
       (kernel_cmdline_of_os os arch);
+  bpf "\n";
+
+  (* Required as a workaround for CentOS 8.0, see:
+   * https://lists.centos.org/pipermail/centos-devel/2019-September/017813.html
+   * https://lists.centos.org/pipermail/centos-devel/2019-October/017882.html
+   *)
+  (match os with
+   | CentOS (8, _) ->
+      bpf "url --url=\"http://mirror.centos.org/centos-8/8/BaseOS/x86_64/os\"\n"
+   | _ -> ()
+  );
   bpf "\n";
 
   (match os with
@@ -824,14 +832,16 @@ and make_boot_media os arch =
      Location (sprintf "http://mirror.centos.org/altarch/%d/os/aarch64/"
                        major)
 
-  | CentOS (major, _), X86_64 ->
+  | CentOS (7, _), X86_64 ->
      (* For 6.x we rebuild this every time there is a new 6.x release, and bump
       * the revision in the index.
       * For 7.x this always points to the latest CentOS, so
       * effectively the minor number is always ignored.
       *)
-     Location (sprintf "http://mirror.centos.org/centos-7/%d/os/x86_64/"
-                       major)
+     Location "http://mirror.centos.org/centos-7/7/os/x86_64/"
+
+  | CentOS (8, _), X86_64 ->
+     Location "http://mirror.centos.org/centos-8/8/BaseOS/x86_64/kickstart"
 
   | Debian (_, dist), arch ->
      Location (sprintf "http://deb.debian.org/debian/dists/%s/main/installer-%s"
@@ -899,17 +909,8 @@ and make_boot_media os arch =
   | RHEL (7, minor), Aarch64 ->
      Location (sprintf "http://download.eng.bos.redhat.com/released/RHEL-ALT-7/7.%d/Server/aarch64/os" minor)
 
-  | RHEL (8, 0), X86_64 ->
-     Location "http://download.eng.bos.redhat.com/released/RHEL-8/8.0-Alpha/BaseOS/x86_64/os"
-
-  | RHEL (8, 0), Aarch64 ->
-     Location "http://download.eng.bos.redhat.com/released/RHEL-8/8.0-Alpha/BaseOS/aarch64/os"
-
-  | RHEL (8, 0), PPC64le ->
-     Location "http://download.eng.bos.redhat.com/released/RHEL-8/8.0-Alpha/BaseOS/ppc64le/os"
-
-  | RHEL (8, 0), S390X ->
-     Location "http://download.eng.bos.redhat.com/released/RHEL-8/8.0-Alpha/BaseOS/s390x/os"
+  | RHEL (8, minor), arch ->
+     Location (sprintf "http://download.eng.bos.redhat.com/released/RHEL-8/8.%d.0/BaseOS/%s/os" minor (string_of_arch arch))
 
   | Ubuntu (_, dist), X86_64 ->
      Location (sprintf "http://archive.ubuntu.com/ubuntu/dists/%s/main/installer-amd64" dist)
@@ -1005,10 +1006,7 @@ and make_virt_install_command os arch ks tmpname tmpout tmpefivars
 
   (*add "--print-xml";*)
 
-  (match arch with
-   | PPC64 | PPC64le -> add "--ram=4096"
-   | _ -> add "--ram=2048"
-  );
+  add "--ram=4096";
 
   (match arch with
    | X86_64 ->
@@ -1146,9 +1144,10 @@ and os_variant_of_os ?(for_fedora = false) os arch =
        sprintf "fedora%d" ver
     | Fedora _, _ -> "fedora26" (* max version known in Fedora 28 *)
 
+    | CentOS (8, _), _ -> "rhel8.0" (* temporary until osinfo updated *)
     | CentOS (major, minor), _ when (major, minor) <= (7,0) ->
        sprintf "centos%d.%d" major minor
-    | CentOS _, _ -> "centos7.0" (* max version known in Fedora 24 *)
+    | CentOS _, _ -> "centos7.0" (* max version known in Fedora 31 *)
 
     | RHEL (6, minor), _ when minor <= 8 ->
        sprintf "rhel6.%d" minor
@@ -1220,7 +1219,7 @@ and make_rhel_yum_conf major minor arch =
   let buf = Buffer.create 4096 in
   let bpf fs = bprintf buf fs in
 
-  if major <= 7 then (
+  if major <= 8 then (
     let baseurl, srpms, optional =
       match major, arch with
       | 5, (I686|X86_64) ->
@@ -1256,6 +1255,13 @@ and make_rhel_yum_conf major minor arch =
          sprintf "%s/Server/source/tree" topurl,
          Some (sprintf "%s/Server-optional/%s/os" topurl (string_of_arch arch),
                sprintf "%s/Server-optional/source/tree" topurl)
+      | 8, arch ->
+         let topurl =
+           sprintf "http://download.devel.redhat.com/released/RHEL-%d/%d.%d.0"
+                   major major minor in
+         sprintf "%s/BaseOS/%s/os" topurl (string_of_arch arch),
+         sprintf "%s/BaseOS/source/tree" topurl,
+         None (* XXX sort out AppStream and CRB *)
       | _ -> assert false in
 
     bpf "\
@@ -1296,28 +1302,6 @@ gpgcheck=0
 keepcache=0
 " major major optionalbaseurl major major optionalsrpms
     )
-  ) else if major = 8 then (
-    bpf "\
-# Temporary configuration for RHEL 8 Alpha.
-
-[rhel8-BaseOS-nightly]
-name=rhel8-BaseOS-nightly
-baseurl=http://download.devel.redhat.com/nightly/latest-RHEL-8/compose/BaseOS/$basearch/os/
-enabled=1
-gpgcheck=0
-
-[rhel8-AppStream-nightly]
-name=rhel8-AppStream-nightly
-baseurl=http://download.devel.redhat.com/nightly/latest-RHEL-8/compose/AppStream/$basearch/os/
-enabled=0
-gpgcheck=0
-
-[rhel8-Buildroot-nightly]
-name=rhel8-Buildroot-nightly
-baseurl=http://download.devel.redhat.com/nightly/latest-BUILDROOT-8-RHEL-8/compose/Buildroot/$basearch/os/
-enabled=1
-gpgcheck=0
-"
   ) else (
     assert false (* not implemented for RHEL major >= 9 *)
   );

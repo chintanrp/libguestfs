@@ -225,13 +225,9 @@ guestfsd_LDADD = \
 	$(HIVEX_LIBS) \
 	$(SD_JOURNAL_LIBS) \
 	$(top_builddir)/gnulib/lib/.libs/libgnu.a \
-	$(GETADDRINFO_LIB) \
-	$(HOSTENT_LIB) \
-	$(INET_NTOP_LIB) \
 	$(LIBSOCKET) \
 	$(LIB_CLOCK_GETTIME) \
 	$(LIBINTL) \
-	$(SERVENT_LIB) \
 	$(PCRE_LIBS) \
 	$(TSK_LIBS) \
 	$(RPC_LIBS) \
@@ -239,6 +235,7 @@ guestfsd_LDADD = \
 	$(OCAML_LIBS)
 
 guestfsd_CPPFLAGS = \
+	-DCAML_NAME_SPACE \
 	-I$(shell $(OCAMLC) -where) \
 	-I$(shell $(OCAMLC) -where)/hivex \
 	-I$(top_srcdir)/gnulib/lib \
@@ -398,6 +395,7 @@ daemon_utils_tests_SOURCES = \
 	utils.c \
 	utils-c.c
 daemon_utils_tests_CPPFLAGS = \
+	-DCAML_NAME_SPACE \
 	-I. \
 	-I$(top_builddir) \
 	-I$(shell $(OCAMLC) -where) \

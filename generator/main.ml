@@ -75,8 +75,6 @@ Run it from the top source directory using the command
 
   output_to "AUTHORS"
             Authors.generate_authors;
-  output_to "p2v/about-authors.c"
-            Authors.generate_p2v_about_authors_c;
 
   output_to "common/errnostring/errnostring-gperf.gperf"
             Errnostring.generate_errnostring_gperf;
@@ -349,28 +347,24 @@ Run it from the top source directory using the command
   output_to "gobject/src/session.c"
             GObject.generate_gobject_session_source;
 
-  output_to "v2v/uefi.ml"
+  output_to "common/mlv2v/uefi.ml"
             UEFI.generate_uefi_ml;
-  output_to "v2v/uefi.mli"
+  output_to "common/mlv2v/uefi.mli"
             UEFI.generate_uefi_mli;
 
-  output_to "customize/customize_cmdline.mli"
+  output_to "common/mlcustomize/customize_cmdline.mli"
             Customize.generate_customize_cmdline_mli;
-  output_to "customize/customize_cmdline.ml"
+  output_to "common/mlcustomize/customize_cmdline.ml"
             Customize.generate_customize_cmdline_ml;
-  output_to "customize/customize-synopsis.pod"
+  output_to "common/mlcustomize/customize-synopsis.pod"
             Customize.generate_customize_synopsis_pod;
-  output_to "customize/customize-options.pod"
+  output_to "common/mlcustomize/customize-options.pod"
             Customize.generate_customize_options_pod;
 
-  output_to "p2v/p2v-config.h"
-            P2v_config.generate_p2v_config_h;
-  output_to "p2v/config.c"
-            P2v_config.generate_p2v_config_c;
-  output_to "p2v/kernel-config.c"
-            P2v_config.generate_p2v_kernel_config_c;
-  output_to "p2v/virt-p2v-kernel-config.pod"
-            P2v_config.generate_p2v_kernel_config_pod;
+  output_to "rust/src/guestfs.rs"
+            Rust.generate_rust;
+  output_to "rust/src/bin/bindtests.rs"
+            Bindtests.generate_rust_bindtests;
 
   (* Generate the list of files generated -- last. *)
   printf "generated %d lines of code\n" (get_lines_generated ());

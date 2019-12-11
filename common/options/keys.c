@@ -121,17 +121,34 @@ read_first_line_from_file (const char *filename)
   return ret;
 }
 
-char *
-get_key (struct key_store *ks, const char *device)
+/* Return the key(s) matching this particular device from the
+ * keystore.  There may be multiple.  If none are read from the
+ * keystore, ask the user.
+ */
+char **
+get_keys (struct key_store *ks, const char *device, const char *uuid)
 {
-  size_t i;
+  size_t i, j, len;
+  char **r;
+  char *s;
+
+  /* We know the returned list must have at least one element and not
+   * more than ks->nr_keys.
+   */
+  len = 1;
+  if (ks)
+    len = MIN (1, ks->nr_keys);
+  r = calloc (len+1, sizeof (char *));
+  if (r == NULL)
+    error (EXIT_FAILURE, errno, "calloc");
+
+  j = 0;
 
   if (ks) {
     for (i = 0; i < ks->nr_keys; ++i) {
       struct key_store_key *key = &ks->keys[i];
-      char *s;
 
-      if (STRNEQ (key->device, device))
+      if (STRNEQ (key->id, device) && (uuid && STRNEQ (key->id, uuid)))
         continue;
 
       switch (key->type) {
@@ -139,63 +156,64 @@ get_key (struct key_store *ks, const char *device)
         s = strdup (key->string.s);
         if (!s)
           error (EXIT_FAILURE, errno, "strdup");
-        return s;
+        r[j++] = s;
+        break;
       case key_file:
-        return read_first_line_from_file (key->file.name);
+        s = read_first_line_from_file (key->file.name);
+        r[j++] = s;
+        break;
       }
-
-      /* Key not found in the key store, ask the user for it. */
-      break;
     }
   }
 
-  return read_key (device);
+  if (j == 0) {
+    /* Key not found in the key store, ask the user for it. */
+    s = read_key (device);
+    if (!s)
+      error (EXIT_FAILURE, 0, _("could not read key from user"));
+    r[0] = s;
+  }
+
+  return r;
 }
 
 struct key_store *
-key_store_add_from_selector (struct key_store *ks, const char *selector_orig)
+key_store_add_from_selector (struct key_store *ks, const char *selector)
 {
-  CLEANUP_FREE char *selector = strdup (selector_orig);
-  const char *elem;
-  char *saveptr;
+  CLEANUP_FREE_STRING_LIST char **fields =
+    guestfs_int_split_string (':', selector);
   struct key_store_key key;
 
-  if (!selector)
-    error (EXIT_FAILURE, errno, "strdup");
+  if (!fields)
+    error (EXIT_FAILURE, errno, "guestfs_int_split_string");
+
+  if (guestfs_int_count_strings (fields) != 3) {
+   invalid_selector:
+    error (EXIT_FAILURE, 0, "invalid selector for --key: %s", selector);
+  }
 
   /* 1: device */
-  elem = strtok_r (selector, ":", &saveptr);
-  if (!elem) {
-   invalid_selector:
-    error (EXIT_FAILURE, 0, "invalid selector for --key: %s", selector_orig);
-  }
-  key.device = strdup (elem);
-  if (!key.device)
+  key.id = strdup (fields[0]);
+  if (!key.id)
     error (EXIT_FAILURE, errno, "strdup");
 
   /* 2: key type */
-  elem = strtok_r (NULL, ":", &saveptr);
-  if (!elem)
-    goto invalid_selector;
-  else if (STREQ (elem, "key"))
+  if (STREQ (fields[1], "key"))
     key.type = key_string;
-  else if (STREQ (elem, "file"))
+  else if (STREQ (fields[1], "file"))
     key.type = key_file;
   else
     goto invalid_selector;
 
   /* 3: actual key */
-  elem = strtok_r (NULL, ":", &saveptr);
-  if (!elem)
-    goto invalid_selector;
   switch (key.type) {
   case key_string:
-    key.string.s = strdup (elem);
+    key.string.s = strdup (fields[2]);
     if (!key.string.s)
       error (EXIT_FAILURE, errno, "strdup");
     break;
   case key_file:
-    key.file.name = strdup (elem);
+    key.file.name = strdup (fields[2]);
     if (!key.file.name)
       error (EXIT_FAILURE, errno, "strdup");
     break;
@@ -216,7 +234,8 @@ key_store_import_key (struct key_store *ks, const struct key_store_key *key)
   }
   assert (ks != NULL);
 
-  new_keys = realloc (ks->keys, sizeof (*ks->keys) + 1);
+  new_keys = realloc (ks->keys,
+                      (ks->nr_keys + 1) * sizeof (struct key_store_key));
   if (!new_keys)
     error (EXIT_FAILURE, errno, "realloc");
 
@@ -246,6 +265,6 @@ free_key_store (struct key_store *ks)
       free (key->file.name);
       break;
     }
-    free (key->device);
+    free (key->id);
   }
 }
